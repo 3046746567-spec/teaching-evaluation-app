@@ -134,7 +134,7 @@ app.get('/intern', (req,res) => res.sendFile(path.join(__dirname,'public','inter
 app.get('/headnurse', (req,res) => res.sendFile(path.join(__dirname,'public','headnurse.html')));
 
 // ==================== 启动 ====================
-app.listen(PORT, '127.0.0.1', () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log('╔══════════════════════════════════════╗');
   console.log('║  🏥 护理实习生评价系统 v2.0        ║');
   console.log('╠══════════════════════════════════════╣');
