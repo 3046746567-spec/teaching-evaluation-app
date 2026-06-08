@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>护理实习生评价系统</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .app-title {
+      text-align: center;
+      padding: 40px 16px 16px;
+    }
+    .app-title h1 {
+      font-size: 26px;
+      background: linear-gradient(135deg, #2563EB, #1D4ED8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .app-title p {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-top: 8px;
+    }
+    .app-icon {
+      text-align: center;
+      font-size: 64px;
+      margin-top: 20px;
+    }
+    .footer-text {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 12px;
+      margin-top: 40px;
+      padding: 16px;
+    }
+    .qr-section {
+      text-align: center;
+      margin: 24px 0;
+      padding: 20px;
+      background: white;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .qr-section img {
+      width: 180px;
+      height: 180px;
+      border-radius: 8px;
+    }
+    .qr-section .qr-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 8px;
+    }
+    .server-address {
+      font-family: monospace;
+      background: var(--bg);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      color: var(--primary);
+      display: inline-block;
+      margin-top: 6px;
+      user-select: all;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="app-icon">🏥</div>
+    <div class="app-title">
+      <h1>护理实习生评价系统</h1>
+      <p>请选择您的身份进入</p>
+    </div>
+
+    <!-- 二维码 -->
+    <div class="qr-section">
+      <img src="/qr_main.png" alt="扫码访问">
+      <div class="qr-label">📱 扫一扫访问</div>
+      <div class="server-address" id="serverAddr">http://localhost:3000</div>
+    </div>
+
+    <div class="role-cards">
+      <a href="/intern" class="role-card">
+        <span class="role-icon">🎓</span>
+        <div class="role-name">实习生入口</div>
+        <div class="role-desc">为带教老师投票评价（每人3票）</div>
+      </a>
+      <a href="/headnurse" class="role-card">
+        <span class="role-icon">🩺</span>
+        <div class="role-name">护士长入口</div>
+        <div class="role-desc">查看排名、管理老师和票数</div>
+      </a>
+    </div>
+
+    <div class="footer-text">
+      每位实习生可投 3 票 · 可投给 3 位不同的带教老师
+    </div>
+  </div>
+
+  <script>
+    // 用JavaScript获取当前地址显示在页面上
+    document.getElementById('serverAddr').textContent = window.location.origin;
+  </script>
+</body>
+</html>

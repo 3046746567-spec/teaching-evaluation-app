@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>护士长 - 护理评价系统</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <!-- ============ 登录页面 ============ -->
+  <div id="loginPage">
+    <div class="header">
+      <span class="icon">🔒</span>
+      <h1>护士长登录</h1>
+      <div class="subtitle">请输入密码以进入管理后台</div>
+    </div>
+    <div class="container">
+      <div class="login-box">
+        <div class="card">
+          <div class="lock-icon">🩺</div>
+          <input type="password" class="input" id="passwordInput" placeholder="请输入护士长密码" autocomplete="off">
+          <button class="btn btn-primary btn-lg" onclick="login()">进入管理后台</button>
+          <div id="loginError" style="color: var(--danger); font-size: 14px; margin-top: 8px; display: none;"></div>
+        </div>
+        <div style="text-align: center; margin-top: 12px;">
+          <a href="/" class="btn btn-outline" style="display: inline-flex;">← 返回首页</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 管理后台 ============ -->
+  <div id="dashboardPage" style="display: none;">
+    <div class="header">
+      <span class="icon">🩺</span>
+      <h1>护士长管理后台</h1>
+      <div class="subtitle">查看排名、管理老师和票数</div>
+    </div>
+
+    <div class="container">
+      <!-- 统计概览 -->
+      <div class="stat-grid" id="statGrid">
+        <div class="stat-card">
+          <div class="number" id="statTeachers">0</div>
+          <div class="label">带教老师</div>
+        </div>
+        <div class="stat-card">
+          <div class="number" id="statTotalVotes">0</div>
+          <div class="label">总票数</div>
+        </div>
+        <div class="stat-card">
+          <div class="number" id="statVoters">0</div>
+          <div class="label">投票人数</div>
+        </div>
+      </div>
+
+      <!-- 排名 -->
+      <div class="card">
+        <div class="card-title">🏆 带教老师排名</div>
+        <div id="rankingList">
+          <div class="loading">
+            <div class="spinner"></div>
+            <div>加载中...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 老师管理 -->
+      <div class="card">
+        <div class="card-title">👩‍🏫 管理带教老师</div>
+        
+        <!-- 添加老师 -->
+        <div class="input-group" style="margin-bottom: 16px;">
+          <input type="text" class="input" id="newTeacherInput" placeholder="输入老师姓名" 
+                 onkeydown="if(event.key==='Enter') addTeacher()">
+          <button class="btn btn-success" onclick="addTeacher()">➕ 添加</button>
+        </div>
+
+        <!-- 老师列表（可删除） -->
+        <div class="management-area">
+          <div class="section-title">当前带教老师名单</div>
+          <div id="teacherMgmtList"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="actions" style="margin-top: 20px; padding-top: 16px; border-top: 2px dashed var(--border);">
+          <button class="btn btn-warning" onclick="confirmResetVotes()">🔄 归零票数</button>
+          <button class="btn btn-outline" onclick="logout()">🚪 退出登录</button>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin-top: 8px;">
+        <a href="/" class="btn btn-outline" style="display: inline-flex;">← 返回首页</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    const PASSWORD = 'panwenting2022';
+    const API_BASE = '';
+    let isLoggedIn = false;
+
+    // ============ 工具函数 ============
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'toast ' + type;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    function showConfirm(title, message, onConfirm) {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = `
+        <div class="modal-box">
+          <h3>${title}</h3>
+          <p>${message}</p>
+          <div class="btn-group">
+            <button class="btn btn-outline" id="confirmCancel">取消</button>
+            <button class="btn btn-danger" id="confirmOk">确认</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      document.getElementById('confirmCancel').onclick = () => overlay.remove();
+      document.getElementById('confirmOk').onclick = () => {
+        overlay.remove();
+        onConfirm();
+      };
+      overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    }
+
+    // ============ 登录 ============
+    function login() {
+      const password = document.getElementById('passwordInput').value;
+      const errorEl = document.getElementById('loginError');
+
+      if (password === PASSWORD) {
+        isLoggedIn = true;
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('dashboardPage').style.display = 'block';
+        errorEl.style.display = 'none';
+        loadDashboard();
+        showToast('✅ 登录成功', 'success');
+      } else {
+        errorEl.textContent = '❌ 密码错误，请重试';
+        errorEl.style.display = 'block';
+        document.getElementById('passwordInput').value = '';
+      }
+    }
+
+    // 回车登录
+    document.getElementById('passwordInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') login();
+    });
+
+    // ============ 退出 ============
+    function logout() {
+      isLoggedIn = false;
+      document.getElementById('dashboardPage').style.display = 'none';
+      document.getElementById('loginPage').style.display = 'block';
+      document.getElementById('passwordInput').value = '';
+    }
+
+    // ============ 加载数据 ============
+    async function loadDashboard() {
+      try {
+        const [statsRes, teachersRes, totalVotesRes] = await Promise.all([
+          fetch(API_BASE + '/api/stats'),
+          fetch(API_BASE + '/api/teachers'),
+          fetch(API_BASE + '/api/total-votes')
+        ]);
+
+        const stats = await statsRes.json();
+        const teachersData = await teachersRes.json();
+        const totalData = await totalVotesRes.json();
+
+        renderStats(stats, teachersData, totalData);
+        renderRanking(stats);
+        renderTeacherMgmt(teachersData);
+      } catch (err) {
+        showToast('❌ 加载数据失败', 'error');
+      }
+    }
+
+    // ============ 渲染统计 ============
+    function renderStats(stats, teachersData, totalData) {
+      const totalVotes = stats.reduce((sum, t) => sum + t.vote_count, 0);
+      document.getElementById('statTeachers').textContent = teachersData.length;
+      document.getElementById('statTotalVotes').textContent = totalVotes;
+      document.getElementById('statVoters').textContent = totalData.total_voters || 0;
+    }
+
+    // ============ 渲染排名 ============
+    function renderRanking(stats) {
+      const list = document.getElementById('rankingList');
+
+      if (!stats || stats.length === 0) {
+        list.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">📋</div>
+            <div>暂无老师数据</div>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '<ul class="rank-list">';
+      stats.forEach((t, index) => {
+        const rankClass = index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : 'rank-other';
+        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index + 1);
+        html += `
+          <li class="rank-item">
+            <div class="rank-number ${rankClass}">${medal}</div>
+            <div class="rank-name">${t.name}</div>
+            <div>
+              <span class="rank-votes">${t.vote_count}</span>
+              <span class="rank-votes-label">票</span>
+            </div>
+          </li>
+        `;
+      });
+      html += '</ul>';
+
+      list.innerHTML = html;
+    }
+
+    // ============ 渲染老师管理列表 ============
+    function renderTeacherMgmt(teachersData) {
+      const list = document.getElementById('teacherMgmtList');
+
+      if (!teachersData || teachersData.length === 0) {
+        list.innerHTML = `
+          <div class="empty-state" style="padding: 16px;">
+            <div>暂无老师，请在上方添加</div>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      teachersData.forEach(t => {
+        html += `
+          <div class="teacher-mgmt-item">
+            <span style="font-weight: 500;">${t.name}</span>
+            <button class="btn btn-danger btn-sm" onclick="confirmDeleteTeacher(${t.id}, '${t.name}')">🗑 删除</button>
+          </div>
+        `;
+      });
+
+      list.innerHTML = html;
+    }
+
+    // ============ 添加老师 ============
+    async function addTeacher() {
+      const input = document.getElementById('newTeacherInput');
+      const name = input.value.trim();
+
+      if (!name) {
+        showToast('请输入老师姓名', 'warning');
+        return;
+      }
+
+      try {
+        const res = await fetch(API_BASE + '/api/teachers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, password: PASSWORD })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          showToast(`✅ 已添加「${name}」`, 'success');
+          input.value = '';
+          loadDashboard();
+        } else {
+          showToast('❌ ' + data.error, 'error');
+        }
+      } catch (err) {
+        showToast('❌ 添加失败，请重试', 'error');
+      }
+    }
+
+    // ============ 删除老师（确认） ============
+    function confirmDeleteTeacher(id, name) {
+      showConfirm(
+        '确认删除',
+        `确定要删除「${name}」吗？该老师的票数也将被清除。`,
+        () => deleteTeacher(id, name)
+      );
+    }
+
+    async function deleteTeacher(id, name) {
+      try {
+        const res = await fetch(API_BASE + '/api/teachers/' + id, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: PASSWORD })
+        });
+
+        if (res.ok) {
+          showToast(`🗑 已删除「${name}」`, 'success');
+          loadDashboard();
+        } else {
+          const data = await res.json();
+          showToast('❌ ' + data.error, 'error');
+        }
+      } catch (err) {
+        showToast('❌ 删除失败', 'error');
+      }
+    }
+
+    // ============ 归零票数（确认） ============
+    function confirmResetVotes() {
+      showConfirm(
+        '⚠️ 确认归零',
+        '确定要清零所有带教老师的票数吗？此操作不可撤销！',
+        resetAllVotes
+      );
+    }
+
+    async function resetAllVotes() {
+      try {
+        const res = await fetch(API_BASE + '/api/reset-votes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: PASSWORD })
+        });
+
+        if (res.ok) {
+          showToast('🔄 所有票数已归零', 'success');
+          loadDashboard();
+        } else {
+          showToast('❌ 操作失败', 'error');
+        }
+      } catch (err) {
+        showToast('❌ 网络错误', 'error');
+      }
+    }
+
+    // ============ 自动刷新（每10秒） ============
+    let autoRefreshTimer = null;
+
+    function startAutoRefresh() {
+      if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+      autoRefreshTimer = setInterval(() => {
+        if (isLoggedIn) {
+          // 只刷新排名和统计数据，不做全量刷新以节省带宽
+          fetch(API_BASE + '/api/stats')
+            .then(r => r.json())
+            .then(stats => {
+              fetch(API_BASE + '/api/teachers')
+                .then(r => r.json())
+                .then(teachers => {
+                  fetch(API_BASE + '/api/total-votes')
+                    .then(r => r.json())
+                    .then(total => {
+                      renderStats(stats, teachers, total);
+                      renderRanking(stats);
+                    });
+                });
+            })
+            .catch(() => {});
+        }
+      }, 10000);
+    }
+
+    // 重写 login 以启动自动刷新
+    const originalLogin = login;
+    login = function() {
+      const password = document.getElementById('passwordInput').value;
+      const errorEl = document.getElementById('loginError');
+
+      if (password === PASSWORD) {
+        isLoggedIn = true;
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('dashboardPage').style.display = 'block';
+        errorEl.style.display = 'none';
+        loadDashboard();
+        startAutoRefresh();
+        showToast('✅ 登录成功', 'success');
+      } else {
+        errorEl.textContent = '❌ 密码错误，请重试';
+        errorEl.style.display = 'block';
+        document.getElementById('passwordInput').value = '';
+      }
+    };
+  </script>
+</body>
+</html>

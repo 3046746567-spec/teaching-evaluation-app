@@ -1,0 +1,24 @@
+📱 二维码使用说明
+====================
+
+请将以下地址替换为你的局域网IP地址，然后重新生成二维码：
+
+当前生成的二维码地址: http://localhost:3000
+（仅限本机访问）
+
+要让手机或其他设备访问：
+1. 查看本机局域网IP：
+   Windows: ipconfig (找 IPv4 地址)
+   Mac:    ifconfig | grep inet
+   Linux:  ip addr show | grep inet
+
+2. 替换 IP 后重新生成:
+   python3 -c "
+   import qrcode
+   qr = qrcode.QRCode()
+   qr.add_data('http://你的IP:3000')
+   qr.make(fit=True)
+   qr.make_image().save('public/qr_main.png')
+   "
+
+示例: http://192.168.1.100:3000

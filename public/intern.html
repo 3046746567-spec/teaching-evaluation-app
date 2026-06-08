@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>实习生 - 护理评价系统</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="header">
+    <span class="icon">🎓</span>
+    <h1>实习生投票</h1>
+    <div class="subtitle">请为您心仪的带教老师投票</div>
+  </div>
+
+  <div class="container">
+    <!-- 剩余票数 -->
+    <div class="remaining-votes" id="remainingBox">
+      <div class="count" id="remainingCount">3</div>
+      <div class="label">剩余票数</div>
+    </div>
+
+    <!-- 老师列表 -->
+    <div class="card">
+      <div class="card-title">👩‍🏫 带教老师列表</div>
+      <div id="teacherList">
+        <div class="loading">
+          <div class="spinner"></div>
+          <div>加载中...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 返回首页 -->
+    <div style="text-align: center; margin-top: 8px;">
+      <a href="/" class="btn btn-outline" style="display: inline-flex;">← 返回首页</a>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    // 获取或创建 voter_id
+    let voterId = localStorage.getItem('voter_id');
+    if (!voterId) {
+      voterId = 'v_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('voter_id', voterId);
+    }
+
+    const API_BASE = '';
+    let teachers = [];
+    let myVotes = [];
+    let remaining = 3;
+
+    // Toast 提示
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'toast ' + type;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    // 加载老师列表和已投票信息
+    async function loadData() {
+      try {
+        const [teachersRes, votesRes] = await Promise.all([
+          fetch(API_BASE + '/api/teachers'),
+          fetch(API_BASE + '/api/my-votes?voter_id=' + encodeURIComponent(voterId))
+        ]);
+
+        teachers = await teachersRes.json();
+        myVotes = await votesRes.json();
+
+        remaining = 3 - myVotes.length;
+        render();
+      } catch (err) {
+        document.getElementById('teacherList').innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">😵</div>
+            <div>加载失败，请检查网络连接</div>
+            <button class="btn btn-primary btn-sm" style="margin-top: 12px;" onclick="location.reload()">重新加载</button>
+          </div>
+        `;
+      }
+    }
+
+    // 投票
+    async function vote(teacherId) {
+      if (remaining <= 0) {
+        showToast('投票次数已用完（每人最多3票）', 'error');
+        return;
+      }
+
+      try {
+        const res = await fetch(API_BASE + '/api/vote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ voter_id: voterId, teacher_id: teacherId })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          myVotes.push(teacherId);
+          remaining = data.remaining;
+          showToast('✅ 投票成功！剩余 ' + (remaining + 1) + ' 票', 'success');
+          render();
+        } else {
+          showToast('❌ ' + data.error, 'error');
+        }
+      } catch (err) {
+        showToast('❌ 网络错误，请重试', 'error');
+      }
+    }
+
+    // 渲染
+    function render() {
+      const list = document.getElementById('teacherList');
+      const remainingEl = document.getElementById('remainingCount');
+
+      remainingEl.textContent = Math.max(0, remaining);
+
+      if (!teachers || teachers.length === 0) {
+        list.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">📋</div>
+            <div>暂无带教老师数据</div>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      teachers.forEach(t => {
+        const voted = myVotes.includes(t.id);
+        const disabled = voted || remaining <= 0;
+
+        html += `
+          <div class="teacher-item" style="opacity: ${voted ? '0.7' : '1'}">
+            <div class="name">${t.name}</div>
+            <div class="vote-status">
+              ${voted
+                ? `<span class="btn btn-voted btn-vote btn-sm">✅ 已投票</span>`
+                : `<button class="btn btn-primary btn-vote btn-sm" onclick="vote(${t.id})" ${disabled ? 'disabled' : ''}>
+                     投票
+                   </button>`
+              }
+            </div>
+          </div>
+        `;
+      });
+
+      list.innerHTML = html;
+    }
+
+    // 初始化
+    loadData();
+  </script>
+</body>
+</html>
